@@ -1,0 +1,27 @@
+{
+  "name": "tableaux",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest --collectCoverage"
+  },
+  "directories": {
+    "lib": "lib",
+    "test": "tests"
+  },
+  "dependencies": {
+    "forward-chainer": "^1.0.5",
+    "jest": "^20.0.4"
+  },
+  "jest": {
+    "coveragePathIgnorePatterns": [
+      "node_modules",
+      "goal.js",
+      "grammar.js"
+    ]
+  },
+  "devDependencies": {},
+  "author": "",
+  "license": "ISC"
+}
