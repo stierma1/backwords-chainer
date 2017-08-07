@@ -10,6 +10,7 @@
 "call("               return "CALL"
 "apply("              return "APPLY"
 "functor("          return "FUNCTOR"
+"systemCall("             return "SYSTEM_CALL"
 [A-Z][_A-Za-z0-9]*              return 'VARIABLE'
 [a-z][_A-Za-z0-9]*               return 'ATOM'
 [0-9]               return 'DIGIT'
@@ -28,7 +29,8 @@
 .                     return 'INVALID'
 
 /lex
-
+%left ',' ';' ')'
+%left UNION
 /* operator associations and precedence */
 
 %start expressions
@@ -103,8 +105,15 @@ statement
   | applyStatement -> $1
   | callStatement -> $1
   | functorStatement -> $1
+  | systemCallStatement -> $1
   | opt_white "(" statements ")" {
     $$ = $3;
+  }
+  ;
+
+systemCallStatement
+  : opt_white SYSTEM_CALL opt_white atomOrVariableOrPredicateOrList opt_white ")" {
+    $$ = yy.SystemCalls($4);
   }
   ;
 
@@ -155,10 +164,10 @@ applyStatement
     ;
 
 unionStatement
-    : opt_white UNIFY opt_white atomOrVariableOrPredicateOrList opt_white "," opt_white atomOrVariableOrPredicateOrList opt_white ")" {
-        $$ = yy.createUnionStatement($4, $8);
-    }
-    ;
+  : opt_white UNIFY opt_white atomOrVariableOrPredicateOrList opt_white "," opt_white atomOrVariableOrPredicateOrList opt_white ")" {
+    $$ = yy.createUnionStatement($4, $8);
+  }
+  ;
 
 variable
     : VARIABLE {

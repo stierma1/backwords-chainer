@@ -220,3 +220,22 @@ test("auto - delete", () => {
   expect(vals.length).toBe(1);
   expect(vals[0].X.toString()).toBe("a");
 })
+
+test("auto - systemcall", () => {
+  var rt = new RuntimeEngine(function(s,substitutionSet){
+    return substitutionSet;
+  });
+  rt.loadDefaults();
+
+  var gen = rt.run("systemCall(go)");
+
+  var vals= [];
+  var {value, done} = gen.next();
+  //while(!done){
+    vals.push(value);
+    //var {value, done} = gen.next();
+  //}
+
+
+  expect(vals.length).toBe(1);
+})
