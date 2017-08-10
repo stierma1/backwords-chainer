@@ -427,3 +427,99 @@ test("test - grandparent (time)", () => {
   expect(vals[0].X.toString()).toBe("jim");
   expect(vals[0].Y.toString()).toBe("jack");
 });
+
+test("test - numbers", () => {
+
+  var rt = _rt;
+
+  var gen = rt.run("=(-1.99, -01.99)");
+
+  var vals= [];
+  var {value, done} = gen.next();
+  //while(!done){
+    vals.push(value);
+    //var {value, done} = gen.next()
+  //}
+  expect(vals.length).toBe(1);
+});
+
+test("test - add numbers", () => {
+
+  var rt = _rt;
+  var gen = rt.run("+(1, 1, X)");
+
+  var vals= [];
+  var {value, done} = gen.next();
+  while(!done){
+    vals.push(value);
+    var {value, done} = gen.next()
+  }
+  expect(vals.length).toBe(1);
+  expect(vals[0].X.toString()).toBe("2")
+
+  var gen = rt.run("+(1, 1, 2)");
+
+  var vals= [];
+  var {value, done} = gen.next();
+  while(!done){
+    vals.push(value);
+    var {value, done} = gen.next()
+  }
+  expect(vals.length).toBe(1);
+
+  var gen = rt.run("+(-1, X, 1)");
+
+  var vals= [];
+  var {value, done} = gen.next();
+  while(!done){
+    vals.push(value);
+    var {value, done} = gen.next()
+  }
+  expect(vals.length).toBe(1);
+  expect(vals[0].X.toString()).toBe("2")
+});
+
+test("test - add numbers", () => {
+  var rt = new RuntimeEngine();
+  rt.loadDefaults();
+  var gen = rt.run("count([], 0)");
+
+  var vals= [];
+  var {value, done} = gen.next();
+  while(!done){
+    vals.push(value);
+    var {value, done} = gen.next()
+  }
+  expect(vals.length).toBe(1);
+
+  var gen = rt.run("count([a], 1)");
+
+  var vals= [];
+  var {value, done} = gen.next();
+  while(!done){
+    vals.push(value);
+    var {value, done} = gen.next()
+  }
+  expect(vals.length).toBe(1);
+
+  var gen = rt.run("count([X,Y,Z], 3)");
+
+  var vals= [];
+  var {value, done} = gen.next();
+  while(!done){
+    vals.push(value);
+    var {value, done} = gen.next()
+  }
+  expect(vals.length).toBe(1);
+
+  var gen = rt.run("count([X,Y,Z], P)");
+
+  var vals= [];
+  var {value, done} = gen.next();
+  while(!done){
+    vals.push(value);
+    var {value, done} = gen.next()
+  }
+  expect(vals.length).toBe(1);
+  expect(vals[0].P.toNumber()).toBe(3)
+});

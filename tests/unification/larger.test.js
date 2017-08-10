@@ -239,3 +239,55 @@ test("auto - systemcall", () => {
 
   expect(vals.length).toBe(1);
 })
+
+test("once - statement", () => {
+  var rt = new RuntimeEngine();
+  rt.loadDefaults();
+  rt.parseRules(`
+    memberOnce(X, L) :- once(member(X, L)).
+  `);
+
+  var gen = rt.run("once(member(1, [1,1,1]))");
+
+  var vals= [];
+  var {value, done} = gen.next();
+  while(!done){
+    vals.push(value);
+    var {value, done} = gen.next();
+  }
+  expect(vals.length).toBe(1)
+})
+
+test("auto - agent", () => {
+  var rt = new RuntimeEngine();
+  rt.loadDefaults();
+  rt.parseRules(`
+    plan(CurrentState, DesiredState, [], CurrentState, _) :- subset2(DesiredState, CurrentState).
+    plan(CurrentState, DesiredState, [Action | ActionList], Z, Depth) :- not(=(Depth, 0)), +(1, NewDepth, Depth),
+      poss(Action, CurrentState, UpdatedState), plan(UpdatedState, DesiredState, ActionList, Z, NewDepth).
+
+    holds(run(Task, Box), CurrentState, [runningOn(Task, Box), running(Task) | NewState])
+      :- member(waiting(Task), CurrentState), member(idle(Box), CurrentState),
+         select(idle(Box), CurrentState, NewState1), select(waiting(Task), NewState1, NewState).
+
+    poss(Action, CurrentState, UpdatedState) :- holds(Action, CurrentState, UpdatedState).
+    shortage(Task, CpuShortage, RamShortage, IOShortage, HardDiskShortage) :-
+      cpuNeeded(Task, Cpu).
+
+  `);
+
+  var gen = rt.run("plan([idle(box2), waiting(task2), idle(box1), waiting(task1)], [running(task2)], Z, Y, 3)");
+
+  var vals= [];
+  var {value, done} = gen.next();
+  var count = 0;
+  while(!done && count < 10){
+    vals.push(value);
+    //console.log(value.Z.toString());
+    var {value, done} = gen.next();
+    count++
+  }
+
+  expect(vals.length).toBe(6)
+  //expect(vals).toBe("[goto(door) | [open(door) | []]]")
+})

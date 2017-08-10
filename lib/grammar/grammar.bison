@@ -10,10 +10,11 @@
 "call("               return "CALL"
 "apply("              return "APPLY"
 "functor("          return "FUNCTOR"
+"+("                   return "ADD"
 "systemCall("             return "SYSTEM_CALL"
 [A-Z][_A-Za-z0-9]*              return 'VARIABLE'
 [a-z][_A-Za-z0-9]*               return 'ATOM'
-[0-9]               return 'DIGIT'
+\-?[0-9]+(\.[0-9]+)?               return 'NUMBER'
 ","                   return ','
 ";"                   return ';'
 "."                   return 'END'
@@ -106,6 +107,7 @@ statement
   | callStatement -> $1
   | functorStatement -> $1
   | systemCallStatement -> $1
+  | addStatement -> $1
   | opt_white "(" statements ")" {
     $$ = $3;
   }
@@ -114,6 +116,12 @@ statement
 systemCallStatement
   : opt_white SYSTEM_CALL opt_white atomOrVariableOrPredicateOrList opt_white ")" {
     $$ = yy.SystemCalls($4);
+  }
+  ;
+
+addStatement
+  : opt_white ADD opt_white atomOrVariableOrPredicateOrList opt_white "," opt_white atomOrVariableOrPredicateOrList opt_white "," opt_white atomOrVariableOrPredicateOrList opt_white ")" {
+    $$ = yy.addStatement($4, $8, $12);
   }
   ;
 
@@ -181,6 +189,13 @@ variable
 atom
     : ATOM {
       $$ = yy.createAtom($1);
+    }
+    | number -> $1
+    ;
+
+number
+    : NUMBER {
+      $$ = yy.createNumber($1);
     }
     ;
 
