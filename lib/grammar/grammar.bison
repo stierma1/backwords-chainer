@@ -4,6 +4,10 @@
 %lex
 %%
 \s+                 return "WHITE_SPACE"
+">("                    return "GREATER_THAN"
+">=("                   return "GREATER_THAN_EQUAL"
+"<("                    return "LESS_THAN"
+"<=("                   return "LESS_THAN_EQUAL"
 "=("                 return "UNIFY"
 "not("               return 'NOT'
 "once("               return "ONCE"
@@ -11,10 +15,13 @@
 "apply("              return "APPLY"
 "functor("          return "FUNCTOR"
 "+("                   return "ADD"
+"*("                    return "MULTI"
 "systemCall("             return "SYSTEM_CALL"
 [A-Z][_A-Za-z0-9]*              return 'VARIABLE'
 [a-z][_A-Za-z0-9]*               return 'ATOM'
 \-?[0-9]+(\.[0-9]+)?               return 'NUMBER'
+[\"]                  return "DOUBLE_QUOTE"
+[\\]                  return "ESCAPE_CHAR"
 ","                   return ','
 ";"                   return ';'
 "."                   return 'END'
@@ -46,6 +53,54 @@ expressions
 
 goal
   : statements -> $1
+  ;
+
+nonQuoteToken
+  : WHITE_SPACE
+  | GREATER_THAN
+  | GREATER_THAN_EQUAL
+  | LESS_THAN
+  | LESS_THAN_EQUAL
+  | UNIFY
+  | NOT
+  | ONCE
+  | CALL
+  | APPLY
+  | FUNCTOR
+  | ADD
+  | MULTI
+  | SYSTEM_CALL
+  | VARIABLE
+  | ATOM
+  | NUMBER
+  | ","
+  | ";"
+  | "."
+  | "("
+  | ")"
+  | ":-"
+  | "!"
+  | "|"
+  | "["
+  | "]"
+  | "_"
+  | INVALID
+  ;
+
+fullyEscaped
+  : ESCAPE_CHAR DOUBLE_QUOTE -> $1 + $2
+  | ESCAGE_CHAR nonQuoteToken -> $1 + $2
+  | ESCAPE_CHAR ESCAPE_CHAR -> $1 + $2
+  ;
+
+stringContent
+  : /**/ -> ""
+  | stringContent fullyEscaped -> $1 + $2
+  | stringContent nonQuoteToken -> $1 + $2
+  ;
+
+string
+  : DOUBLE_QUOTE stringContent DOUBLE_QUOTE -> $1 + $2 + $3
   ;
 
 opt_white
@@ -108,6 +163,11 @@ statement
   | functorStatement -> $1
   | systemCallStatement -> $1
   | addStatement -> $1
+  | multiStatement -> $1
+  | greaterThanStatement -> $1
+  | greaterThanEqualStatement -> $1
+  | lessThanStatement -> $1
+  | lessThanEqualStatement -> $1
   | opt_white "(" statements ")" {
     $$ = $3;
   }
@@ -119,9 +179,39 @@ systemCallStatement
   }
   ;
 
+lessThanStatement
+    : opt_white LESS_THAN opt_white atomOrVariableOrPredicateOrList opt_white "," opt_white atomOrVariableOrPredicateOrList opt_white ")" {
+      $$ = yy.createLessThanStatement($4, $8);
+    }
+    ;
+
+lessThanEqualStatement
+      : opt_white LESS_THAN_EQUAL opt_white atomOrVariableOrPredicateOrList opt_white "," opt_white atomOrVariableOrPredicateOrList opt_white ")" {
+        $$ = yy.createLessThanEqualStatement($4, $8);
+      }
+      ;
+
+greaterThanStatement
+  : opt_white GREATER_THAN opt_white atomOrVariableOrPredicateOrList opt_white "," opt_white atomOrVariableOrPredicateOrList opt_white ")" {
+    $$ = yy.createGreaterThanStatement($4, $8);
+  }
+  ;
+
+greaterThanEqualStatement
+    : opt_white GREATER_THAN_EQUAL opt_white atomOrVariableOrPredicateOrList opt_white "," opt_white atomOrVariableOrPredicateOrList opt_white ")" {
+      $$ = yy.createGreaterThanEqualStatement($4, $8);
+    }
+    ;
+
 addStatement
   : opt_white ADD opt_white atomOrVariableOrPredicateOrList opt_white "," opt_white atomOrVariableOrPredicateOrList opt_white "," opt_white atomOrVariableOrPredicateOrList opt_white ")" {
     $$ = yy.addStatement($4, $8, $12);
+  }
+  ;
+
+multiStatement
+  : opt_white MULTI opt_white atomOrVariableOrPredicateOrList opt_white "," opt_white atomOrVariableOrPredicateOrList opt_white "," opt_white atomOrVariableOrPredicateOrList opt_white ")" {
+    $$ = yy.createMultiStatement($4, $8, $12);
   }
   ;
 
@@ -191,6 +281,9 @@ atom
       $$ = yy.createAtom($1);
     }
     | number -> $1
+    | string {
+      $$ = yy.createString($1)
+    }
     ;
 
 number

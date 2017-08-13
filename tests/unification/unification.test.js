@@ -523,3 +523,195 @@ test("test - add numbers", () => {
   expect(vals.length).toBe(1);
   expect(vals[0].P.toNumber()).toBe(3)
 });
+
+test("test - lessThan", () => {
+
+  var rt = _rt;
+
+  var gen = rt.run("<(-1.99, -01.99)");
+
+  var vals= [];
+  var {value, done} = gen.next();
+  while(!done){
+    vals.push(value);
+    var {value, done} = gen.next()
+  }
+  expect(vals.length).toBe(0);
+
+  var gen = rt.run("<(0, 2)");
+
+  var vals= [];
+  var {value, done} = gen.next();
+  while(!done){
+    vals.push(value);
+    var {value, done} = gen.next()
+  }
+  expect(vals.length).toBe(1);
+});
+
+test("test - greaterThan", () => {
+
+  var rt = _rt;
+
+  var gen = rt.run(">(-1.99, -01.99)");
+
+  var vals= [];
+  var {value, done} = gen.next();
+  while(!done){
+    vals.push(value);
+    var {value, done} = gen.next()
+  }
+  expect(vals.length).toBe(0);
+
+  var gen = rt.run(">(2, 0)");
+
+  var vals= [];
+  var {value, done} = gen.next();
+  while(!done){
+    vals.push(value);
+    var {value, done} = gen.next()
+  }
+  expect(vals.length).toBe(1);
+});
+
+test("test - lessThanEqual", () => {
+
+  var rt = _rt;
+
+  var gen = rt.run("<=(-1.98, -01.99)");
+
+  var vals= [];
+  var {value, done} = gen.next();
+  while(!done){
+    vals.push(value);
+    var {value, done} = gen.next()
+  }
+  expect(vals.length).toBe(0);
+
+  var rt = _rt;
+
+  var gen = rt.run("<=(-1.99, -01.99)");
+
+  var vals= [];
+  var {value, done} = gen.next();
+  while(!done){
+    vals.push(value);
+    var {value, done} = gen.next()
+  }
+  expect(vals.length).toBe(1);
+
+  var gen = rt.run("<=(0, 2)");
+
+  var vals= [];
+  var {value, done} = gen.next();
+  while(!done){
+    vals.push(value);
+    var {value, done} = gen.next()
+  }
+  expect(vals.length).toBe(1);
+});
+
+test("test - greaterThanEqual", () => {
+
+  var rt = _rt;
+
+  var gen = rt.run(">=(-2, -01.99)");
+
+  var vals= [];
+  var {value, done} = gen.next();
+  while(!done){
+    vals.push(value);
+    var {value, done} = gen.next()
+  }
+  expect(vals.length).toBe(0);
+
+  var rt = _rt;
+
+  var gen = rt.run(">=(-1.99, -01.99)");
+
+  var vals= [];
+  var {value, done} = gen.next();
+  while(!done){
+    vals.push(value);
+    var {value, done} = gen.next()
+  }
+  expect(vals.length).toBe(1);
+
+  var gen = rt.run(">=(2, 0)");
+
+  var vals= [];
+  var {value, done} = gen.next();
+  while(!done){
+    vals.push(value);
+    var {value, done} = gen.next()
+  }
+  expect(vals.length).toBe(1);
+});
+
+test("test - multiplication", () => {
+
+  var rt = _rt;
+
+  var gen = rt.run("*(-2, -2, X)");
+
+  var vals= [];
+  var {value, done} = gen.next();
+  while(!done){
+    vals.push(value);
+    var {value, done} = gen.next()
+  }
+  expect(vals.length).toBe(1);
+  expect(vals[0].X.toNumber()).toBe(4);
+
+  var gen = rt.run("*(-2, X, -2)");
+
+  var vals= [];
+  var {value, done} = gen.next();
+  while(!done){
+    vals.push(value);
+    var {value, done} = gen.next()
+  }
+  expect(vals.length).toBe(1);
+  expect(vals[0].X.toNumber()).toBe(1);
+
+});
+
+test("test - string atoms", () => {
+
+  var rt = _rt;
+
+  var gen = rt.run('=("stuff", "stuff")');
+
+  var vals= [];
+  var {value, done} = gen.next();
+  while(!done){
+    vals.push(value);
+    var {value, done} = gen.next()
+  }
+  expect(vals.length).toBe(1);
+
+  var gen = rt.run('=("stuff", X)');
+
+  var vals= [];
+  var {value, done} = gen.next();
+  while(!done){
+    vals.push(value);
+    var {value, done} = gen.next()
+  }
+  expect(vals.length).toBe(1);
+  expect(vals[0].X.removeQuotes()).toBe("stuff");
+
+  var gen = rt.run('=("stuff", stuff)');
+
+  var vals= [];
+  var {value, done} = gen.next();
+  while(!done && value){
+    vals.push(value);
+    var {value, done} = gen.next()
+  }
+
+  expect(vals.length).toBe(0);
+  //expect(vals[0].X.removeQuotes()).toBe("stuff");
+
+
+});
