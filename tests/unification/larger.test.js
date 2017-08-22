@@ -291,3 +291,24 @@ test("auto - agent", () => {
   expect(vals.length).toBe(6)
   //expect(vals).toBe("[goto(door) | [open(door) | []]]")
 })
+
+test("object - atoms", () => {
+  var rt = new RuntimeEngine();
+  rt.loadDefaults();
+  rt.setCurrentObjectBindings({"0": {hello:"world"}})
+  rt.parseRules(`
+    other({0}).
+  `);
+
+  var gen = rt.run("other(X)");
+
+  var vals= [];
+  var {value, done} = gen.next();
+  while(!done){
+    vals.push(value);
+    var {value, done} = gen.next();
+  }
+  expect(vals.length).toBe(1)
+  console.log(vals[0].X)
+  expect(vals[0].X.getValue().hello).toBe("world")
+})

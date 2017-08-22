@@ -33,6 +33,7 @@
 "["                   return "["
 "]"                   return "]"
 "_"                   return "_"
+\{[0-9A-Za-z_\-]+\}           return "OBJECT_ATOM"
 <<EOF>>               return 'EOF'
 .                     return 'INVALID'
 
@@ -72,6 +73,7 @@ nonQuoteToken
   | SYSTEM_CALL
   | VARIABLE
   | ATOM
+  | OBJECT_ATOM
   | NUMBER
   | ","
   | ";"
@@ -283,6 +285,10 @@ atom
     | number -> $1
     | string {
       $$ = yy.createString($1)
+    }
+    | OBJECT_ATOM {
+      var objAtomKey = $1.replace("{","").replace("}","");
+      $$ = yy.createObjectAtom(objAtomKey);
     }
     ;
 
