@@ -312,3 +312,23 @@ test("object - atoms", () => {
   console.log(vals[0].X)
   expect(vals[0].X.getValue().hello).toBe("world")
 })
+
+test("dots in strings - atoms", () => {
+  var rt = new RuntimeEngine();
+  rt.loadDefaults();
+  rt.setCurrentObjectBindings({"0": {hello:"world"}})
+  rt.parseRules(`
+    other("$.yes").
+  `);
+
+  var gen = rt.run("other(X)");
+
+  var vals= [];
+  var {value, done} = gen.next();
+  while(!done){
+    vals.push(value);
+    var {value, done} = gen.next();
+  }
+  expect(vals.length).toBe(1)
+  expect(vals[0].X.getValue()).toBe("\"$.yes\"")
+})
