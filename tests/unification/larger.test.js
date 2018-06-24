@@ -223,6 +223,8 @@ test("auto - delete", () => {
 
 test("auto - systemcall", () => {
   var rt = new RuntimeEngine(function(s,substitutionSet){
+    //console.log(arguments)
+
     return substitutionSet;
   });
   rt.loadDefaults();
@@ -235,7 +237,107 @@ test("auto - systemcall", () => {
     vals.push(value);
     //var {value, done} = gen.next();
   //}
+  //console.log(vals)
 
+  expect(vals.length).toBe(1);
+})
+
+test("auto - builtInSystemCalls - isAtom", () => {
+  var rt = new RuntimeEngine(function(s,substitutionSet){
+    //console.log(arguments)
+    return substitutionSet;
+  });
+  rt.loadDefaults();
+
+  var gen = rt.run("systemCall(isAtom(atom))");
+
+  var vals= [];
+  var {value, done} = gen.next();
+  //while(!done){
+    vals.push(value);
+    //var {value, done} = gen.next();
+  //}
+  //console.log(vals)
+
+  expect(vals.length).toBe(1);
+})
+
+test("auto - builtInSystemCalls - isAtom with Var", () => {
+  var rt = new RuntimeEngine(function(s,substitutionSet){
+    //console.log(arguments)
+    return substitutionSet;
+  });
+  rt.loadDefaults();
+
+  var gen = rt.run("is(X, atom), systemCall(isAtom(X))");
+
+  var vals= [];
+  var {value, done} = gen.next();
+  //while(!done){
+    vals.push(value);
+    //var {value, done} = gen.next();
+  //}
+  //console.log(vals)
+
+  expect(vals.length).toBe(1);
+})
+
+test("auto - builtInSystemCalls - isString", () => {
+  var rt = new RuntimeEngine(function(s,substitutionSet){
+    //console.log(arguments)
+    return substitutionSet;
+  });
+  rt.loadDefaults();
+
+  var gen = rt.run('systemCall(isString("atom"))');
+
+  var vals= [];
+  var {value, done} = gen.next();
+  //while(!done){
+    vals.push(value);
+    //var {value, done} = gen.next();
+  //}
+  //console.log(vals)
+
+  expect(vals.length).toBe(1);
+})
+
+test("auto - builtInSystemCalls - isList", () => {
+  var rt = new RuntimeEngine(function(s,substitutionSet){
+    //console.log(arguments)
+    return substitutionSet;
+  });
+  rt.loadDefaults();
+
+  var gen = rt.run('systemCall(isList([X]))');
+
+  var vals= [];
+  var {value, done} = gen.next();
+  //while(!done){
+    vals.push(value);
+    //var {value, done} = gen.next();
+  //}
+  //console.log(vals)
+
+  expect(vals.length).toBe(1);
+})
+
+test("auto - builtInSystemCalls - isNumber", () => {
+  var rt = new RuntimeEngine(function(s,substitutionSet){
+    //console.log(arguments)
+    return substitutionSet;
+  });
+  rt.loadDefaults();
+
+  var gen = rt.run('systemCall(isString(5))');
+
+  var vals= [];
+  var {value, done} = gen.next();
+  //while(!done){
+    vals.push(value);
+    //var {value, done} = gen.next();
+  //}
+  //console.log(vals)
 
   expect(vals.length).toBe(1);
 })
