@@ -8,8 +8,6 @@ var andUnify = Unification.andUnify;
 var orUnify = Unification.orUnify;
 var SubstitutionSet = Unification.SubstitutionSet;
 
-
-
 test("subset", () => {
   var rt = new RuntimeEngine();
 
@@ -269,7 +267,7 @@ test("auto - builtInSystemCalls - isAtom with Var", () => {
   });
   rt.loadDefaults();
 
-  var gen = rt.run("is(X, atom), systemCall(isAtom(X))");
+  var gen = rt.run("=(X, atom), systemCall(isAtom(X))");
 
   var vals= [];
   var {value, done} = gen.next();
@@ -581,5 +579,6 @@ rt.parseRules(rules);
 var first = rt.toString();
 var rt2 = new RuntimeEngine();
 rt2.parseRules(first);
-  expect(first).toBe(rt2.toString())
+
+expect(first).toBe(rt2.toString())
 })

@@ -249,19 +249,22 @@ test('grandparents check - horn clause', () => {
   var varGrandChild = new Variable({name:"grandchild"});
   var varP1 = new Variable({name:"P1"});
   var varP2 = new Variable({name:"P2"});
-  var hornClauses = [];
+  var hornClauses = {};
   var gpredicate = new Predicate({name:"grandparent", argsList:[varX, varY]});
   var parent1 = new PredicateStatement({hornClauses:hornClauses,predicate:new Predicate({name:"parent", argsList:[varX, varZ]})});
   var parent2 = new PredicateStatement({hornClauses:hornClauses,predicate:new Predicate({name:"parent", argsList:[varZ, varY]})});
   var grandparentHornClause = new HornClause({ head:gpredicate, body:new AndStatements({subStatements:[parent1, parent2]})});
-  hornClauses.push(grandparentHornClause);
+  hornClauses["grandparent"] = {"2":[]};
+  hornClauses.grandparent[2].push(grandparentHornClause);
   var parentRule1 = new Predicate({name:"parent", argsList:[jim, james]});
   var parentRule2 = new Predicate({name:"parent", argsList:[james, joe]});
   var parentRule3 = new Predicate({name:"parent", argsList:[james, jack]});
   var parentRule4 = new Predicate({name:"parent", argsList:[susan, james]})
   var parentHornClauses = [parentRule1, parentRule2, parentRule3, parentRule4].map((pR) => {
     var hc = new HornClause({head:pR, body:new AndStatements({subStatements:[]})});
-    hornClauses.push(hc);
+    hornClauses[pR.name] = hornClauses[pR.name] || {};
+    hornClauses[pR.name]["2"] = hornClauses[pR.name]["2"] || [];
+    hornClauses[pR.name]["2"].push(hc);
   });
   //grandparent(X, Y) :- parent(X, Z), parent(Z, Y)
   var gparentPred = new Predicate({name:"parent", argsList:[varGrandParent, varZ]});
@@ -308,8 +311,9 @@ test('grandparents check - horn clause', () => {
 test('memberOf test', () => {
   var myList = List.fromArray([atomA, atomB, atomC]);
   var memberOfHornClause = defaultHornClauses.createMemberClause();
+  var horns = {member:{"2":[memberOfHornClause[0]]}}
   var memberOf = new Predicate({name:"member", argsList:[varX, myList]});
-  var goal = new PredicateStatement({hornClauses:memberOfHornClause, predicate:memberOf});
+  var goal = new PredicateStatement({hornClauses:horns, predicate:memberOf});
 
   var unifySetGenerator = goal.unify(new SubstitutionSet({}))
   var values = [];
@@ -332,8 +336,9 @@ test('memberOf test', () => {
 test('not memberOf - test', () => {
   var myList = List.fromArray([atomA, atomB]);
   var memberOfHornClause = defaultHornClauses.createMemberClause();
+  var horns = {member:{"2":[memberOfHornClause[0]]}}
   var memberOf = new Predicate({name:"member", argsList:[varX, myList]});
-  var p = new PredicateStatement({hornClauses:memberOfHornClause, predicate:memberOf});
+  var p = new PredicateStatement({hornClauses:horns, predicate:memberOf});
   var goal = new AndStatements({subStatements:[new UnionStatement({subject:varX, object:atomC}), new NotStatement({subStatement: p })]});
   //var goal = new NotStatement({subStatement: p });
   var unifySetGenerator = goal.unify(new SubstitutionSet({}))
@@ -355,8 +360,9 @@ test('not memberOf - test', () => {
 test('memberOf test element', () => {
   var myList = List.fromArray([atomA, atomB, atomC]);
   var memberOfHornClause = defaultHornClauses.createMemberClause();
+  var horns = {member:{"2":[memberOfHornClause[0]]}}
   var memberOf = new Predicate({name:"member", argsList:[atomA, myList]});
-  var goal = new PredicateStatement({hornClauses:memberOfHornClause, predicate:memberOf});
+  var goal = new PredicateStatement({hornClauses:horns, predicate:memberOf});
 
   var unifySetGenerator = goal.unify(new SubstitutionSet({}))
   var values = [];
