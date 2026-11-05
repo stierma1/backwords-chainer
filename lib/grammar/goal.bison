@@ -14,6 +14,10 @@
 "call("               return "CALL"
 "apply("              return "APPLY"
 "functor("          return "FUNCTOR"
+"findall("             return "FINDALL"
+"bagof("               return "BAGOF"
+"setof("               return "SETOF"
+"forall("              return "FORALL"
 "+("                   return "ADD"
 "*("                    return "MULTI"
 "systemCall("             return "SYSTEM_CALL"
@@ -68,6 +72,10 @@ nonQuoteToken
   | CALL
   | APPLY
   | FUNCTOR
+  | FINDALL
+  | BAGOF
+  | SETOF
+  | FORALL
   | ADD
   | MULTI
   | SYSTEM_CALL
@@ -163,6 +171,10 @@ statement
   | applyStatement -> $1
   | callStatement -> $1
   | functorStatement -> $1
+  | findallStatement -> $1
+  | bagofStatement -> $1
+  | setofStatement -> $1
+  | forallStatement -> $1
   | systemCallStatement -> $1
   | addStatement -> $1
   | multiStatement -> $1
@@ -178,6 +190,30 @@ statement
 systemCallStatement
   : opt_white SYSTEM_CALL opt_white atomOrVariableOrPredicateOrList opt_white ")" {
     $$ = yy.SystemCalls($4);
+  }
+  ;
+
+findallStatement
+  : opt_white FINDALL opt_white atomOrVariableOrPredicateOrList opt_white "," opt_white statement opt_white "," opt_white atomOrVariableOrPredicateOrList opt_white ")" {
+    $$ = yy.createFindAllStatement($4, $8, $12);
+  }
+  ;
+
+bagofStatement
+  : opt_white BAGOF opt_white atomOrVariableOrPredicateOrList opt_white "," opt_white statement opt_white "," opt_white atomOrVariableOrPredicateOrList opt_white ")" {
+    $$ = yy.createBagOfStatement($4, $8, $12);
+  }
+  ;
+
+setofStatement
+  : opt_white SETOF opt_white atomOrVariableOrPredicateOrList opt_white "," opt_white statement opt_white "," opt_white atomOrVariableOrPredicateOrList opt_white ")" {
+    $$ = yy.createSetOfStatement($4, $8, $12);
+  }
+  ;
+
+forallStatement
+  : opt_white FORALL opt_white statement opt_white "," opt_white statement opt_white ")" {
+    $$ = yy.createForallStatement($4, $8);
   }
   ;
 
