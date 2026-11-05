@@ -27,6 +27,8 @@
 "+("                   return "ADD"
 "*("                    return "MULTI"
 "systemCall("             return "SYSTEM_CALL"
+\x27([^\x27\\]|\x27\x27|\\.)*\x27      return "QUOTED_ATOM"
+\x27                   return "SINGLE_QUOTE"
 [A-Z][_A-Za-z0-9]*              return 'VARIABLE'
 [a-z][_A-Za-z0-9]*               return 'ATOM'
 \-?[0-9]+(\.[0-9]+)?               return 'NUMBER'
@@ -40,6 +42,7 @@
 ")"                   return ')'
 ":-"                  return ':-'
 "!"                   return '!'
+"^"                   return "CARET"
 "|"                   return "|"
 "["                   return "["
 "]"                   return "]"
@@ -95,6 +98,8 @@ nonQuoteToken
   | SYSTEM_CALL
   | VARIABLE
   | ATOM
+  | QUOTED_ATOM
+  | SINGLE_QUOTE
   | OBJECT_ATOM
   | NUMBER
   | ","
@@ -104,6 +109,7 @@ nonQuoteToken
   | ")"
   | ":-"
   | "!"
+  | CARET
   | "|"
   | "["
   | "]"
@@ -113,7 +119,7 @@ nonQuoteToken
 
 fullyEscaped
   : ESCAPE_CHAR DOUBLE_QUOTE -> $1 + $2
-  | ESCAGE_CHAR nonQuoteToken -> $1 + $2
+  | ESCAPE_CHAR nonQuoteToken -> $1 + $2
   | ESCAPE_CHAR ESCAPE_CHAR -> $1 + $2
   ;
 
@@ -203,6 +209,7 @@ simpleStatement
   | opt_white "!" {
     $$ = yy.createCutStatement();
   }
+  | existentialStatement -> $1
   | unionStatement -> $1
   | notStatement -> $1
   | onceStatement -> $1
@@ -374,6 +381,12 @@ applyStatement
     }
     ;
 
+existentialStatement
+  : opt_white variable opt_white CARET opt_white statement {
+    $$ = yy.createExistentialStatement($2, $6);
+  }
+  ;
+
 unionStatement
   : opt_white UNIFY opt_white atomOrVariableOrPredicateOrList opt_white "," opt_white atomOrVariableOrPredicateOrList opt_white ")" {
     $$ = yy.createUnionStatement($4, $8);
@@ -392,6 +405,9 @@ variable
 atom
     : ATOM {
       $$ = yy.createAtom($1);
+    }
+    | QUOTED_ATOM {
+      $$ = yy.createQuotedAtom($1);
     }
     | number -> $1
     | string {

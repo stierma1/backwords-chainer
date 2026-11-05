@@ -25,12 +25,16 @@ Current highlights:
 - Delayed disequality constraints via `dif/2`
 - Configurable occurs checking and `unify_with_occurs_check/2`
 - Exact integer and bignum arithmetic
+- Line/block comments, quoted atoms, and string escape handling
+- Basic user-defined infix operators via `op/3`
+- Existential `^` qualification in `bagof/3` and `setof/3`
+- Parse errors with line and column information
 - All-solutions predicates: `findall/3`, `bagof/3`, `setof/3`, and `forall/2`
 - Dynamic database predicates: `assert/1`, `asserta/1`, `assertz/1`, `retract/1`, `abolish/1`, and `clause/2`
 - Built-in list/planning predicates via `loadDefaults()`
 - Custom JavaScript system calls
 - Rule serialization and retraction
-- 227 tests covering unification, statements, the parser, search strategies, arithmetic, constraints, and runtime behavior
+- 237 tests covering unification, statements, the parser, search strategies, arithmetic, constraints, syntax, and runtime behavior
 
 ## Installation
 
@@ -220,6 +224,40 @@ rt.parseRules(`
 
 const [solution] = [...rt.run("other(X)")];
 console.log(solution.X.getValue().hello); // "world"
+```
+
+### Comments, quoted atoms, and operators
+
+Line and block comments are supported:
+
+```prolog
+% a line comment
+p(a). /* a block comment */
+```
+
+Quoted atoms may contain spaces and escaped quotes:
+
+```prolog
+'my predicate'(a).
+value('hello world').
+value('it''s').
+```
+
+Double-quoted strings support common escapes such as `\n`, `\t`, `\\`, and `\"`.
+
+Basic user-defined infix operators can be declared with `op/3`:
+
+```prolog
+:- op(500, xfx, likes).
+john likes mary.
+friends(X, Y) :- X likes Y.
+```
+
+`^` marks variables as existentially quantified inside `bagof/3` and `setof/3`:
+
+```prolog
+bagof(Y, X^pair(X, Y), Bag).
+setof(Y, X^pair(X, Y), Bag).
 ```
 
 ### Built-in list/planning defaults
@@ -428,13 +466,13 @@ This is useful for embedding the resolution engine in another system or for dire
 - Variables in rules are implicitly universally quantified; query variables are implicitly existential.
 - `not(...)` is negation-as-failure, not logical negation.
 - The occurs check is partial for some cyclic variable constructions; use `unify_with_occurs_check/2` for an explicit check.
-- `bagof/3` and `setof/3` do not yet support existential `^` qualification.
 - Cut pruning is implemented for depth-first execution; BFS does not yet apply cut pruning.
 - `assert/1` and `retract/1` support facts and rules, but there is no `retractall/1`.
 - `assert/1` does not currently accept zero-arity clauses because the parser cannot distinguish them from atoms in clause arguments.
 - Integer and bignum arithmetic is exact in `is/2`; rational division currently produces decimal floating-point results rather than exact rationals.
 - The occurs-check setting is process-global in the current implementation.
-- There are no Prolog comments, user-defined operators, modules, DCGs, exceptions, or I/O predicates.
+- User-defined operators currently support infix declarations (`xfx`, `xfy`, `yfx`); prefix/postfix forms and full operator precedence tables are still limited.
+- Modules, DCGs, exceptions, and I/O predicates are not implemented.
 - DFS can loop on left-recursive programs; BFS can find shallow solutions but may consume large amounts of memory without visited-state deduplication.
 
 ## Roadmap
@@ -463,16 +501,16 @@ The goal is to become progressively closer to a practical Prolog implementation.
 | Configurable occurs check | Better compatibility and safer cyclic-term handling | Done |
 | Rational/integer and bignum support | Accurate arithmetic beyond floating-point numbers | Integers/bignums done; exact rationals pending |
 
-### Phase 3: Syntax and parser compatibility
+### Phase 3: Syntax and parser compatibility (implemented)
 
-| Feature | Benefit |
-| --- | --- |
-| `%` line comments and `/* ... */` block comments | Makes programs readable and familiar |
-| Infix and user-defined operators | Reduces reliance on prefix forms such as `+(A,B,C)` |
-| Zero-arity predicates and facts | Enables `true`, `fail`, and natural Prolog programs |
-| Quoted atoms and escape handling | Better string/atom fidelity |
-| `^` existential qualification for `bagof`/`setof` | Full free-variable grouping semantics |
-| Better parse errors with locations | Faster debugging |
+| Feature | Benefit | Status |
+| --- | --- | --- |
+| `%` line comments and `/* ... */` block comments | Makes programs readable and familiar | Done |
+| Infix and user-defined operators | Reduces reliance on prefix forms such as `+(A,B,C)` | Infix done; prefix/postfix limited |
+| Zero-arity predicates and facts | Enables `true`, `fail`, and natural Prolog programs | Done |
+| Quoted atoms and escape handling | Better string/atom fidelity | Done |
+| `^` existential qualification for `bagof`/`setof` | Full free-variable grouping semantics | Done |
+| Better parse errors with locations | Faster debugging | Done |
 
 ### Phase 4: Term inspection and meta-predicates
 
@@ -537,6 +575,8 @@ lib/grammar/
   grammar.js, goal.js        Generated parsers
   if-then-else.js            Arrow-syntax rewrite helper
   phase2.js                  Infix arithmetic/equality rewrite helper
+  comments.js                Comment stripping
+  operators.js               User-defined operator directives and rewriting
   context.js                 Parser callbacks and rule database
   runtime-engine.js          Public runtime engine and search strategies
 tests/unification/           Jest test suites
@@ -556,7 +596,7 @@ npm install
 npm test
 ```
 
-The suite currently contains 227 tests and exercises unification, statements, parsing, arithmetic, constraints, lists, negation, cut, if-then-else, dynamic database predicates, all-solutions predicates, DFS/BFS search, serialization, and error handling.
+The suite currently contains 237 tests and exercises unification, statements, parsing, arithmetic, constraints, comments, quoted atoms, operators, lists, negation, cut, if-then-else, dynamic database predicates, all-solutions predicates, DFS/BFS search, serialization, and error handling.
 
 ## Design notes
 
@@ -567,6 +607,8 @@ The suite currently contains 227 tests and exercises unification, statements, pa
 - Cut is implemented with a per-predicate control context; predicate invocations do not leak cut state into their callers.
 - If-then-else arrow syntax is rewritten to an internal `ifThenElse` statement before parsing.
 - Infix arithmetic, comparisons, equality, and disequality are rewritten to internal prefix predicates before parsing.
+- Comments are stripped with string awareness before rewriting and parsing.
+- User-defined infix operators are registered from `:- op(...)` directives and rewritten before parsing.
 - `dif/2` constraints are stored on substitution sets and checked whenever substitutions are combined.
 - Dynamic database clauses are stored in the same clause database used by parsed rules.
 - All-solutions predicates collect solutions through the active search strategy and construct proper list terms.
