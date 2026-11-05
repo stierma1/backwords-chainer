@@ -15,14 +15,17 @@ Current highlights:
 - Unification with a partial occurs check
 - Facts, rules, recursion, conjunction, and disjunction in rule bodies
 - Lists, numbers, strings, nested compound terms, and object atoms
-- Negation-as-failure via `not(...)`
+- Negation-as-failure via `not(...)` and `\+`
+- Cut (`!`) and if-then-else (`Cond -> Then ; Else`)
 - `once(...)`, `call(...)`, `apply(...)`, and `functor(...)`
+- `true/0`, `fail/0`, and zero-arity predicates
 - Relational arithmetic and comparisons
 - All-solutions predicates: `findall/3`, `bagof/3`, `setof/3`, and `forall/2`
+- Dynamic database predicates: `assert/1`, `asserta/1`, `assertz/1`, `retract/1`, `abolish/1`, and `clause/2`
 - Built-in list/planning predicates via `loadDefaults()`
 - Custom JavaScript system calls
 - Rule serialization and retraction
-- 191 tests covering unification, statements, the parser, search strategies, and runtime behavior
+- 210 tests covering unification, statements, the parser, search strategies, and runtime behavior
 
 ## Installation
 
@@ -129,9 +132,44 @@ Comparisons:
 
 ```prolog
 notPrimary(X) :- color(X), not(primary(X)).
+notBlue(X) :- color(X), \+ =(X, blue).
 ```
 
-`not(...)` is negation-as-failure, not logical negation.
+`not(...)` and `\+` are negation-as-failure, not logical negation.
+
+### Cut and if-then-else
+
+```prolog
+first(X) :- member(X, [a,b,c]), !.
+
+choice(X) :- (primary(X) -> =(X, primary) ; =(X, secondary)).
+```
+
+`!` commits to choices made since entering the current predicate. `(Cond -> Then ; Else)` commits to the first solution of `Cond` and then runs `Then`; it runs `Else` only when `Cond` fails. Cut pruning follows Prolog's depth-first control flow; breadth-first search does not currently implement cut pruning.
+
+
+### Dynamic database
+
+Run these as goals:
+
+```prolog
+assert(foo(a))
+assertz(foo(b))
+asserta(foo(z))
+
+assert(rule(X) :- base(X))
+retract(foo(a))
+retract(rule(X) :- base(X))
+abolish(foo/1)
+```
+
+`clause(Head, Body)` exposes stored facts and rules:
+
+```js
+rt.run("clause(foo(X), Body)");
+```
+
+Facts return `Body = true`; rules return their body term. `abolish(Name/Arity)` removes every clause for that predicate indicator.
 
 ### Strings, numbers, and object atoms
 
@@ -359,27 +397,27 @@ This is useful for embedding the resolution engine in another system or for dire
 - `not(...)` is negation-as-failure, not logical negation.
 - The occurs check is partial.
 - `bagof/3` and `setof/3` do not yet support existential `^` qualification.
-- There is no cut (`!`), if-then-else (`-> ;`), or `\+` alias.
-- There is no in-language dynamic database mutation such as `assert/1` or `retract/1`; only the JavaScript `retractRule` API exists.
+- Cut pruning is implemented for depth-first execution; BFS does not yet apply cut pruning.
+- `assert/1` and `retract/1` support facts and rules, but there is no `retractall/1`.
+- `assert/1` does not currently accept zero-arity clauses because the parser cannot distinguish them from atoms in clause arguments.
 - Arithmetic is relational (`+(A, B, C)`), not `is/2` expression evaluation.
 - There are no Prolog comments, user-defined operators, modules, DCGs, exceptions, or I/O predicates.
-- Zero-arity predicates and facts are not supported by the parser.
 - DFS can loop on left-recursive programs; BFS can find shallow solutions but may consume large amounts of memory without visited-state deduplication.
 
 ## Roadmap
 
 The goal is to become progressively closer to a practical Prolog implementation.
 
-### Phase 1: Prolog control and database semantics
+### Phase 1: Prolog control and database semantics (implemented)
 
-| Feature | Benefit |
-| --- | --- |
-| Cut `!` | Prunes choice points, making deterministic predicates and committed-choice logic possible |
-| If-then-else `-> ;` | Expresses conditional logic without auxiliary predicates |
-| `\+` alias for negation | Standard Prolog syntax and compatibility |
-| `true/0` and `fail/0` | Removes special-case handling and enables zero-arity goals |
-| `assert/1`, `asserta/1`, `assertz/1`, `retract/1`, `abolish/1` | Enables stateful logic programs, dynamic knowledge bases, and meta-programming |
-| `clause/2` | Supports introspection and meta-interpreters |
+| Feature | Benefit | Status |
+| --- | --- | --- |
+| Cut `!` | Prunes choice points, making deterministic predicates and committed-choice logic possible | Done for DFS |
+| If-then-else `-> ;` | Expresses conditional logic without auxiliary predicates | Done |
+| `\+` alias for negation | Standard Prolog syntax and compatibility | Done |
+| `true/0` and `fail/0` | Removes special-case handling and enables zero-arity goals | Done |
+| `assert/1`, `asserta/1`, `assertz/1`, `retract/1`, `abolish/1` | Enables stateful logic programs, dynamic knowledge bases, and meta-programming | Done |
+| `clause/2` | Supports introspection and meta-interpreters | Done |
 
 ### Phase 2: Arithmetic, equality, and term semantics
 
@@ -465,6 +503,7 @@ lib/grammar/
   grammar.bison              Rule grammar source
   goal.bison                 Goal grammar source
   grammar.js, goal.js        Generated parsers
+  if-then-else.js            Arrow-syntax rewrite helper
   context.js                 Parser callbacks and rule database
   runtime-engine.js          Public runtime engine and search strategies
 tests/unification/           Jest test suites
@@ -484,7 +523,7 @@ npm install
 npm test
 ```
 
-The suite currently contains 191 tests and exercises unification, statements, parsing, arithmetic, lists, negation, all-solutions predicates, DFS/BFS search, serialization, and error handling.
+The suite currently contains 210 tests and exercises unification, statements, parsing, arithmetic, lists, negation, cut, if-then-else, dynamic database predicates, all-solutions predicates, DFS/BFS search, serialization, and error handling.
 
 ## Design notes
 
@@ -492,6 +531,9 @@ The suite currently contains 191 tests and exercises unification, statements, pa
 - Breadth-first search uses an explicit FIFO queue of resolution states.
 - Terms are represented as JavaScript classes rather than plain objects, making unification and serialization explicit.
 - Every user-defined predicate invocation freshens its clause variables through `getRuntimeInstance()`.
+- Cut is implemented with a per-predicate control context; predicate invocations do not leak cut state into their callers.
+- If-then-else arrow syntax is rewritten to an internal `ifThenElse` statement before parsing.
+- Dynamic database clauses are stored in the same clause database used by parsed rules.
 - All-solutions predicates collect solutions through the active search strategy and construct proper list terms.
 
 ## Non-goals

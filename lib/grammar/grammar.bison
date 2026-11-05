@@ -10,10 +10,16 @@
 "<=("                   return "LESS_THAN_EQUAL"
 "=("                 return "UNIFY"
 "not("               return 'NOT'
+"\\+"                return "NOT_ALIAS"
 "once("               return "ONCE"
 "call("               return "CALL"
 "apply("              return "APPLY"
 "functor("          return "FUNCTOR"
+"ifThenElse("          return "IF_THEN_ELSE"
+"asserta("             return "ASSERTA"
+"assertz("             return "ASSERTZ"
+"assert("              return "ASSERT"
+"retract("             return "RETRACT"
 "findall("             return "FINDALL"
 "bagof("               return "BAGOF"
 "setof("               return "SETOF"
@@ -27,6 +33,7 @@
 [\"]                  return "DOUBLE_QUOTE"
 [\\]                  return "ESCAPE_CHAR"
 ","                   return ','
+"/"                   return '/'
 ";"                   return ';'
 "."                   return 'END'
 "("                   return '('
@@ -68,6 +75,13 @@ nonQuoteToken
   | LESS_THAN_EQUAL
   | UNIFY
   | NOT
+  | NOT_ALIAS
+  | IF_THEN_ELSE
+  | RETRACT
+  | ASSERT
+  | ASSERTZ
+  | ASSERTA
+  | "/"
   | ONCE
   | CALL
   | APPLY
@@ -135,11 +149,17 @@ fact
   : predicate END {
     $$ = yy.createHornClause($1);
   }
+  | ATOM END {
+    $$ = yy.createHornClause(yy.createPredicate({name:$1, argsList:[]}));
+  }
   ;
 
 hornClause
   : predicate opt_white body {
     $$ = yy.createHornClause($1, $3);
+  }
+  | ATOM opt_white body {
+    $$ = yy.createHornClause(yy.createPredicate({name:$1, argsList:[]}), $3);
   }
   ;
 
@@ -162,8 +182,26 @@ statements
   ;
 
 statement
+  : simpleStatement %prec ';' {
+    $$ = $1;
+  }
+  | ifThenElseStatement -> $1
+  | assertStatement -> $1
+  | retractStatement -> $1
+  | opt_white "(" statements ")" {
+    $$ = $3;
+  }
+  ;
+
+simpleStatement
   : opt_white predicate {
     $$ = yy.createPredicateStatement($2)
+  }
+  | opt_white ATOM {
+    $$ = yy.createPredicateStatement(yy.createPredicate({name:$2, argsList:[]}));
+  }
+  | opt_white "!" {
+    $$ = yy.createCutStatement();
   }
   | unionStatement -> $1
   | notStatement -> $1
@@ -182,9 +220,6 @@ statement
   | greaterThanEqualStatement -> $1
   | lessThanStatement -> $1
   | lessThanEqualStatement -> $1
-  | opt_white "(" statements ")" {
-    $$ = $3;
-  }
   ;
 
 systemCallStatement
@@ -269,11 +304,51 @@ predicateHead
   }
   ;
 
+ifThenElseStatement
+  : opt_white IF_THEN_ELSE opt_white statement opt_white "," opt_white statement opt_white "," opt_white statement opt_white ")" {
+    $$ = yy.createIfThenElseStatement($4, $8, $12);
+  }
+  ;
+
+assertStatement
+  : opt_white ASSERT opt_white clauseTerm opt_white ")" {
+    $$ = yy.createAssertStatement($4, "z");
+  }
+  | opt_white ASSERTA opt_white clauseTerm opt_white ")" {
+    $$ = yy.createAssertStatement($4, "a");
+  }
+  | opt_white ASSERTZ opt_white clauseTerm opt_white ")" {
+    $$ = yy.createAssertStatement($4, "z");
+  }
+  ;
+
+retractStatement
+  : opt_white RETRACT opt_white clauseTerm opt_white ")" {
+    $$ = yy.createRetractStatement($4);
+  }
+  ;
+
+clauseTerm
+  : opt_white "(" clauseTerm ")" {
+    $$ = $3;
+  }
+  | predicate opt_white ":-" opt_white statements {
+    $$ = yy.createHornClause($1, yy.createAndStatements($5));
+  }
+  | predicate {
+    $$ = yy.createHornClause($1);
+  }
+  ;
+
 notStatement
   : opt_white NOT statements ")" {
     $$ = yy.createNotStatement($3);
   }
+  | opt_white NOT_ALIAS statement {
+    $$ = yy.createNotStatement($3);
+  }
   ;
+
 
 callStatement
   : opt_white CALL opt_white atomOrVariableOrPredicateOrList opt_white ")" {
@@ -337,6 +412,11 @@ number
 atomOrVariableOrPredicateOrList
     : atomOrVariableOrPredicate -> $1
     | list - $1
+    | nameArityTerm -> $1
+    ;
+
+nameArityTerm
+    : atom "/" atomOrVariable -> yy.createPredicate({name:"/", argsList:[$1, $3]})
     ;
 
 atomOrVariableOrPredicate
