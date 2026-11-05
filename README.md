@@ -19,13 +19,18 @@ Current highlights:
 - Cut (`!`) and if-then-else (`Cond -> Then ; Else`)
 - `once(...)`, `call(...)`, `apply(...)`, and `functor(...)`
 - `true/0`, `fail/0`, and zero-arity predicates
-- Relational arithmetic and comparisons
+- Standard `is/2` arithmetic with infix expressions
+- Infix comparisons (`=:=`, `=\=`, `=<`, `>=`, `<`, `>`)
+- Infix unification and disequality (`=`, `\=`)
+- Delayed disequality constraints via `dif/2`
+- Configurable occurs checking and `unify_with_occurs_check/2`
+- Exact integer and bignum arithmetic
 - All-solutions predicates: `findall/3`, `bagof/3`, `setof/3`, and `forall/2`
 - Dynamic database predicates: `assert/1`, `asserta/1`, `assertz/1`, `retract/1`, `abolish/1`, and `clause/2`
 - Built-in list/planning predicates via `loadDefaults()`
 - Custom JavaScript system calls
 - Rule serialization and retraction
-- 210 tests covering unification, statements, the parser, search strategies, and runtime behavior
+- 227 tests covering unification, statements, the parser, search strategies, arithmetic, constraints, and runtime behavior
 
 ## Installation
 
@@ -111,20 +116,47 @@ produces `X.toString() === "[a | [b | [c | []]]]"`.
 
 ### Arithmetic and comparison
 
-Arithmetic is relational and prefix-style:
+Standard Prolog-style arithmetic is supported:
 
 ```prolog
-sum(X) :- +(1, 2, X).          % X = 3
-difference(X) :- +(1, X, 5).   % X = 4
-product(X) :- *(3, 4, X).      % X = 12
+sum(X) :- X is 1 + 2.
+precedence(X) :- X is 1 + 2 * 3.
+integerDivision(X) :- X is 7 // 2.
+remainder(X) :- X is 7 mod 2.
+power(X) :- X is 2 ** 10.
 ```
 
-Comparisons:
+Infix arithmetic comparisons:
 
 ```prolog
+1 + 2 =:= 3.
+1 + 2 =\= 4.
+2 =< 3.
+3 >= 2.
+1 < 2.
+2 > 1.
+```
+
+Unification and disequality:
+
+```prolog
+X = a.
+a \= b.
+```
+
+`\=` succeeds only when the terms are not unifiable. `dif/2` delays the disequality constraint until variables become bound:
+
+```prolog
+dif(X, a), X = b.
+dif(X, a), X = a.
+```
+
+The older relational arithmetic forms remain available:
+
+```prolog
+sum(X) :- +(1, 2, X).
+product(X) :- *(3, 4, X).
 >(2, 1).
->=(2, 2).
-<(1, 2).
 <=(2, 2).
 ```
 
@@ -395,12 +427,13 @@ This is useful for embedding the resolution engine in another system or for dire
 - Only Horn clauses are supported; this is not a full first-order theorem prover.
 - Variables in rules are implicitly universally quantified; query variables are implicitly existential.
 - `not(...)` is negation-as-failure, not logical negation.
-- The occurs check is partial.
+- The occurs check is partial for some cyclic variable constructions; use `unify_with_occurs_check/2` for an explicit check.
 - `bagof/3` and `setof/3` do not yet support existential `^` qualification.
 - Cut pruning is implemented for depth-first execution; BFS does not yet apply cut pruning.
 - `assert/1` and `retract/1` support facts and rules, but there is no `retractall/1`.
 - `assert/1` does not currently accept zero-arity clauses because the parser cannot distinguish them from atoms in clause arguments.
-- Arithmetic is relational (`+(A, B, C)`), not `is/2` expression evaluation.
+- Integer and bignum arithmetic is exact in `is/2`; rational division currently produces decimal floating-point results rather than exact rationals.
+- The occurs-check setting is process-global in the current implementation.
 - There are no Prolog comments, user-defined operators, modules, DCGs, exceptions, or I/O predicates.
 - DFS can loop on left-recursive programs; BFS can find shallow solutions but may consume large amounts of memory without visited-state deduplication.
 
@@ -419,16 +452,16 @@ The goal is to become progressively closer to a practical Prolog implementation.
 | `assert/1`, `asserta/1`, `assertz/1`, `retract/1`, `abolish/1` | Enables stateful logic programs, dynamic knowledge bases, and meta-programming | Done |
 | `clause/2` | Supports introspection and meta-interpreters | Done |
 
-### Phase 2: Arithmetic, equality, and term semantics
+### Phase 2: Arithmetic, equality, and term semantics (implemented)
 
-| Feature | Benefit |
-| --- | --- |
-| `is/2` and an expression parser | Familiar `X is 1 + 2 * 3` arithmetic |
-| `=:=`, `=\=`, `=<`, `>=` | Standard evaluated numeric comparisons |
-| `=/2` and `\=/2` | Standard unification and disequality syntax |
-| `dif/2` | Delayed, sound disequality constraints |
-| Configurable occurs check | Better compatibility and safer cyclic-term handling |
-| Rational/integer and bignum support | Accurate arithmetic beyond floating-point numbers |
+| Feature | Benefit | Status |
+| --- | --- | --- |
+| `is/2` and an expression parser | Familiar `X is 1 + 2 * 3` arithmetic | Done |
+| `=:=`, `=\=`, `=<`, `>=`, `<`, `>` | Standard evaluated numeric comparisons | Done |
+| `=/2` and `\=/2` | Standard unification and disequality syntax | Done |
+| `dif/2` | Delayed, sound disequality constraints | Done |
+| Configurable occurs check | Better compatibility and safer cyclic-term handling | Done |
+| Rational/integer and bignum support | Accurate arithmetic beyond floating-point numbers | Integers/bignums done; exact rationals pending |
 
 ### Phase 3: Syntax and parser compatibility
 
@@ -449,7 +482,6 @@ The goal is to become progressively closer to a practical Prolog implementation.
 | `functor/3` and `arg/3` | Term decomposition and construction |
 | `copy_term/2` and `term_variables/2` | Safe meta-programming and term rewriting |
 | `call/N` | Higher-order logic and generic collection predicates |
-| `unify_with_occurs_check/2` | Explicit safe unification |
 | `findall/4`, `aggregate/3`, `aggregate_all/3` | More collection and aggregation patterns |
 
 ### Phase 5: Standard library
@@ -504,6 +536,7 @@ lib/grammar/
   goal.bison                 Goal grammar source
   grammar.js, goal.js        Generated parsers
   if-then-else.js            Arrow-syntax rewrite helper
+  phase2.js                  Infix arithmetic/equality rewrite helper
   context.js                 Parser callbacks and rule database
   runtime-engine.js          Public runtime engine and search strategies
 tests/unification/           Jest test suites
@@ -523,7 +556,7 @@ npm install
 npm test
 ```
 
-The suite currently contains 210 tests and exercises unification, statements, parsing, arithmetic, lists, negation, cut, if-then-else, dynamic database predicates, all-solutions predicates, DFS/BFS search, serialization, and error handling.
+The suite currently contains 227 tests and exercises unification, statements, parsing, arithmetic, constraints, lists, negation, cut, if-then-else, dynamic database predicates, all-solutions predicates, DFS/BFS search, serialization, and error handling.
 
 ## Design notes
 
@@ -533,6 +566,8 @@ The suite currently contains 210 tests and exercises unification, statements, pa
 - Every user-defined predicate invocation freshens its clause variables through `getRuntimeInstance()`.
 - Cut is implemented with a per-predicate control context; predicate invocations do not leak cut state into their callers.
 - If-then-else arrow syntax is rewritten to an internal `ifThenElse` statement before parsing.
+- Infix arithmetic, comparisons, equality, and disequality are rewritten to internal prefix predicates before parsing.
+- `dif/2` constraints are stored on substitution sets and checked whenever substitutions are combined.
 - Dynamic database clauses are stored in the same clause database used by parsed rules.
 - All-solutions predicates collect solutions through the active search strategy and construct proper list terms.
 
