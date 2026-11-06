@@ -36,11 +36,13 @@ Current highlights:
 - Aggregation: `aggregate/3` and `aggregate_all/3`
 - Standard list library: `length/2`, `reverse/2`, `nth0/3`, `nth1/3`, `last/2`, `between/3`, `succ/2`, `sort/2`, `msort/2`, `keysort/2`, `sum_list/2`, `max_list/2`, `min_list/2`, `memberchk/2`, and `selectchk/3`
 - Higher-order list predicates: `maplist/N`, `include/3`, `exclude/3`, and `foldl/N`
+- First-argument clause indexing with cache invalidation on database updates
+- Optional BFS visited-state deduplication, result limits, queue/node/depth bounds, and cancellation
 - Dynamic database predicates: `assert/1`, `asserta/1`, `assertz/1`, `retract/1`, `abolish/1`, and `clause/2`
 - Built-in list/planning predicates via `loadDefaults()`
 - Custom JavaScript system calls
 - Rule serialization and retraction
-- 259 tests covering unification, statements, the parser, search strategies, arithmetic, constraints, syntax, term inspection, higher-order predicates, and the standard list library
+- 271 tests covering unification, statements, the parser, search strategies, indexing, arithmetic, constraints, syntax, term inspection, higher-order predicates, the standard list library, and a logistics planning scenario
 
 ## Installation
 
@@ -424,11 +426,22 @@ BFS can be bounded:
 ```js
 rt.runBreadthFirst("goal(X)", {
   maxDepth: 10,
-  maxNodes: 1000
+  maxNodes: 1000,
+  maxQueue: 5000
 });
 ```
 
-BFS is implemented as FIFO expansion over resolution states. All-solutions predicates use the active search strategy when collecting their internal goal solutions.
+Search options include:
+
+- `maxResults`: maximum number of answers to yield (DFS or BFS)
+- `maxDepth`: BFS depth limit
+- `maxNodes`: BFS expansion limit
+- `maxQueue`: BFS queue-size limit
+- `dedupe` / `visitedStates`: enable BFS visited-state deduplication
+- `shouldStop`: cancellation callback polled during search
+- `signal`: abort signal
+
+BFS is implemented as FIFO expansion over resolution states. Cut-containing predicates fall back to depth-first resolution in BFS mode so cut semantics are preserved. All-solutions predicates use the active search strategy when collecting their internal goal solutions.
 
 ## Custom system calls
 
@@ -483,8 +496,13 @@ Removes one matching clause from the runtime database. The argument may be a par
 Parses and runs a goal. Returns a generator of solution objects. Options:
 
 - `search` or `strategy`: `"depth-first"` (default), `"breadth-first"`, `"bfs"`, or `"breadth"`
+- `maxResults`: maximum number of answers to yield
 - `maxDepth`: BFS depth limit
 - `maxNodes`: BFS expansion limit
+- `maxQueue`: BFS queue-size limit
+- `dedupe` / `visitedStates`: enable BFS visited-state deduplication
+- `shouldStop`: cancellation callback
+- `signal`: abort signal
 
 ### `solve(goal, [options])`
 
@@ -546,7 +564,7 @@ This is useful for embedding the resolution engine in another system or for dire
 - `aggregate/3` and `aggregate_all/3` support `count`, `sum`, `avg`, `min`, `max`, `bag`, and `set` templates; the full Prolog aggregate library is not implemented.
 - `keysort/2` accepts two-element list pairs rather than Prolog's `Key-Value` pair syntax.
 - Modules, DCGs, exceptions, and I/O predicates are not implemented.
-- DFS can loop on left-recursive programs; BFS can find shallow solutions but may consume large amounts of memory without visited-state deduplication.
+- DFS can loop on left-recursive programs. BFS can find shallow solutions; visited-state deduplication is available but opt-in because it can suppress duplicate answers. Tail-call optimization is not yet implemented.
 
 ## Roadmap
 
@@ -616,16 +634,16 @@ The goal is to become progressively closer to a practical Prolog implementation.
 | Basic I/O (`write/1`, `nl/0`, `read/1`) | Interactive and scripting use cases |
 | `format/2` | Prolog-compatible formatted output |
 
-### Phase 7: Performance and search quality
+### Phase 7: Performance and search quality (partially implemented)
 
-| Feature | Benefit |
-| --- | --- |
-| First-argument indexing | Avoids scanning irrelevant clauses |
-| Tail-call/last-call optimization | Supports long recursive loops without stack growth |
-| BFS visited-state deduplication | Prevents repeated exploration of equivalent states |
-| Cut-aware BFS semantics | Keeps pruning behavior consistent across search modes |
-| Clause compilation/caching | Faster repeated predicate calls |
-| Memory-bounded search and cancellation | More predictable behavior for large problems |
+| Feature | Benefit | Status |
+| --- | --- | --- |
+| First-argument indexing | Avoids scanning irrelevant clauses | Done |
+| Tail-call/last-call optimization | Supports long recursive loops without stack growth | Pending |
+| BFS visited-state deduplication | Prevents repeated exploration of equivalent states | Done (opt-in) |
+| Cut-aware BFS semantics | Keeps pruning behavior consistent across search modes | Done via DFS fallback for cut predicates |
+| Clause compilation/caching | Faster repeated predicate calls | Partial: first-argument index cache |
+| Memory-bounded search and cancellation | More predictable behavior for large problems | Done: result/depth/node/queue limits and `shouldStop` |
 
 ## Project layout
 
@@ -641,6 +659,7 @@ lib/unification/
   statements.js              Resolution statements and all-solutions predicates
   default-horn-clauses.js    Built-in list/planning clauses
   trs.js                     Substitution/term rewriting
+  clause-index.js            First-argument clause indexing cache
   utils.js                   Runtime variable generation
 lib/grammar/
   grammar.bison              Rule grammar source
@@ -669,7 +688,7 @@ npm install
 npm test
 ```
 
-The suite currently contains 259 tests and exercises unification, statements, parsing, arithmetic, constraints, comments, quoted atoms, operators, type checks, term inspection, higher-order calls, aggregation, the standard list library, lists, negation, cut, if-then-else, dynamic database predicates, all-solutions predicates, DFS/BFS search, serialization, and error handling.
+The suite currently contains 271 tests and exercises unification, statements, parsing, arithmetic, constraints, comments, quoted atoms, operators, type checks, term inspection, higher-order calls, aggregation, the standard list library, clause indexing, search bounds, deduplication, lists, negation, cut, if-then-else, dynamic database predicates, all-solutions predicates, DFS/BFS search, serialization, error handling, and a multi-warehouse logistics planning scenario.
 
 ## Design notes
 
