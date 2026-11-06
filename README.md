@@ -34,11 +34,13 @@ Current highlights:
 - Higher-order `call/N`
 - All-solutions predicates: `findall/3`, `findall/4`, `bagof/3`, `setof/3`, and `forall/2`
 - Aggregation: `aggregate/3` and `aggregate_all/3`
+- Standard list library: `length/2`, `reverse/2`, `nth0/3`, `nth1/3`, `last/2`, `between/3`, `succ/2`, `sort/2`, `msort/2`, `keysort/2`, `sum_list/2`, `max_list/2`, `min_list/2`, `memberchk/2`, and `selectchk/3`
+- Higher-order list predicates: `maplist/N`, `include/3`, `exclude/3`, and `foldl/N`
 - Dynamic database predicates: `assert/1`, `asserta/1`, `assertz/1`, `retract/1`, `abolish/1`, and `clause/2`
 - Built-in list/planning predicates via `loadDefaults()`
 - Custom JavaScript system calls
 - Rule serialization and retraction
-- 248 tests covering unification, statements, the parser, search strategies, arithmetic, constraints, syntax, term inspection, and runtime behavior
+- 259 tests covering unification, statements, the parser, search strategies, arithmetic, constraints, syntax, term inspection, higher-order predicates, and the standard list library
 
 ## Installation
 
@@ -223,6 +225,35 @@ findall(X, member(X, [a,b]), List, Tail).
 aggregate_all(count, member(X, [a,b,c]), Count).
 aggregate_all(sum(X), member(X, [1,2,3]), Total).
 ```
+
+### Standard list library
+
+Everyday list and numeric relations are built in:
+
+```prolog
+length([a,b,c], N).
+reverse([a,b,c], R).
+nth0(0, [a,b], X).
+nth1(1, [a,b], X).
+last([a,b,c], X).
+between(2, 4, X).
+succ(2, X).
+sum_list([1,2,3], S).
+max_list([3,1,2], M).
+min_list([3,1,2], M).
+```
+
+Higher-order list predicates use the same closure syntax as `call/N`:
+
+```prolog
+maplist(double, [1,2,3], Ys).
+maplist(add, [1,2], [10,20], Ys).
+include(positive, [-1,0,1,2], Positives).
+exclude(positive, [-1,0,1,2], NonPositives).
+foldl(add, [1,2,3], 0, Total).
+```
+
+`memberchk/2` and `selectchk/3` return only the first matching solution. `sort/2` and `msort/2` operate on ordinary lists; `keysort/2` expects key-value pairs represented as two-element lists (`[Key, Value]`).
 
 ### Dynamic database
 
@@ -513,6 +544,7 @@ This is useful for embedding the resolution engine in another system or for dire
 - The occurs-check setting is process-global in the current implementation.
 - User-defined operators currently support infix declarations (`xfx`, `xfy`, `yfx`); prefix/postfix forms and full operator precedence tables are still limited.
 - `aggregate/3` and `aggregate_all/3` support `count`, `sum`, `avg`, `min`, `max`, `bag`, and `set` templates; the full Prolog aggregate library is not implemented.
+- `keysort/2` accepts two-element list pairs rather than Prolog's `Key-Value` pair syntax.
 - Modules, DCGs, exceptions, and I/O predicates are not implemented.
 - DFS can loop on left-recursive programs; BFS can find shallow solutions but may consume large amounts of memory without visited-state deduplication.
 
@@ -563,16 +595,16 @@ The goal is to become progressively closer to a practical Prolog implementation.
 | `call/N` | Higher-order logic and generic collection predicates | Done |
 | `findall/4`, `aggregate/3`, `aggregate_all/3` | More collection and aggregation patterns | Done |
 
-### Phase 5: Standard library
+### Phase 5: Standard library (implemented)
 
-| Feature | Benefit |
-| --- | --- |
-| `length/2`, `reverse/2`, `nth0/3`, `nth1/3`, `last/2` | Everyday list programming |
-| `between/3`, `succ/2` | Generator-style numeric relations |
-| `sort/2`, `msort/2`, `keysort/2` | Standard ordering and deduplication |
-| `sum_list/2`, `max_list/2`, `min_list/2` | Common aggregation |
-| `maplist/N`, `include/3`, `exclude/3`, `foldl/N` | Higher-order list processing |
-| `memberchk/2`, `selectchk/3` | Deterministic convenience predicates |
+| Feature | Benefit | Status |
+| --- | --- | --- |
+| `length/2`, `reverse/2`, `nth0/3`, `nth1/3`, `last/2` | Everyday list programming | Done |
+| `between/3`, `succ/2` | Generator-style numeric relations | Done |
+| `sort/2`, `msort/2`, `keysort/2` | Standard ordering and deduplication | Done |
+| `sum_list/2`, `max_list/2`, `min_list/2` | Common aggregation | Done |
+| `maplist/N`, `include/3`, `exclude/3`, `foldl/N` | Higher-order list processing | Done |
+| `memberchk/2`, `selectchk/3` | Deterministic convenience predicates | Done |
 
 ### Phase 6: Larger-program features
 
@@ -637,7 +669,7 @@ npm install
 npm test
 ```
 
-The suite currently contains 248 tests and exercises unification, statements, parsing, arithmetic, constraints, comments, quoted atoms, operators, type checks, term inspection, higher-order calls, aggregation, lists, negation, cut, if-then-else, dynamic database predicates, all-solutions predicates, DFS/BFS search, serialization, and error handling.
+The suite currently contains 259 tests and exercises unification, statements, parsing, arithmetic, constraints, comments, quoted atoms, operators, type checks, term inspection, higher-order calls, aggregation, the standard list library, lists, negation, cut, if-then-else, dynamic database predicates, all-solutions predicates, DFS/BFS search, serialization, and error handling.
 
 ## Design notes
 

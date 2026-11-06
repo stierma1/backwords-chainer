@@ -31,7 +31,8 @@
 \x27                   return "SINGLE_QUOTE"
 [A-Z][_A-Za-z0-9]*              return 'VARIABLE'
 [a-z][_A-Za-z0-9]*               return 'ATOM'
-\-?[0-9]+(\.[0-9]+)?               return 'NUMBER'
+[0-9]+(\.[0-9]+)?                 return 'NUMBER'
+"-"                   return "MINUS"
 [\"]                  return "DOUBLE_QUOTE"
 [\\]                  return "ESCAPE_CHAR"
 ","                   return ','
@@ -102,6 +103,7 @@ nonQuoteToken
   | SINGLE_QUOTE
   | OBJECT_ATOM
   | NUMBER
+  | MINUS
   | ","
   | ";"
   | END
@@ -422,6 +424,9 @@ atom
     | QUOTED_ATOM {
       $$ = yy.createQuotedAtom($1);
     }
+    | MINUS number {
+      $$ = yy.createNumber("-" + $2.toString());
+    }
     | number -> $1
     | string {
       $$ = yy.createString($1)
@@ -446,6 +451,10 @@ atomOrVariableOrPredicateOrList
 
 nameArityTerm
     : atom "/" atomOrVariable -> yy.createPredicate({name:"/", argsList:[$1, $3]})
+    ;
+
+pairTerm
+    : atomOrVariableOrPredicate opt_white "-" opt_white atomOrVariableOrPredicate -> yy.createPredicate({name:"-", argsList:[$1, $5]})
     ;
 
 atomOrVariableOrPredicate
