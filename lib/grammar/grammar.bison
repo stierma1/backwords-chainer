@@ -239,6 +239,9 @@ findallStatement
   : opt_white FINDALL opt_white atomOrVariableOrPredicateOrList opt_white "," opt_white statement opt_white "," opt_white atomOrVariableOrPredicateOrList opt_white ")" {
     $$ = yy.createFindAllStatement($4, $8, $12);
   }
+  | opt_white FINDALL opt_white atomOrVariableOrPredicateOrList opt_white "," opt_white statement opt_white "," opt_white atomOrVariableOrPredicateOrList opt_white "," opt_white atomOrVariableOrPredicateOrList opt_white ")" {
+    $$ = yy.createFindAllStatement($4, $8, $12, $16);
+  }
   ;
 
 bagofStatement
@@ -358,8 +361,18 @@ notStatement
 
 
 callStatement
-  : opt_white CALL opt_white atomOrVariableOrPredicateOrList opt_white ")" {
-    $$ = yy.createCallStatement($4);
+  : opt_white CALL opt_white callArguments opt_white ")" {
+    $$ = yy.createCallStatement.apply(null, $4);
+  }
+  ;
+
+callArguments
+  : atomOrVariableOrPredicateOrList {
+    $$ = [$1];
+  }
+  | callArguments opt_white "," opt_white atomOrVariableOrPredicateOrList {
+    $1.push($5);
+    $$ = $1;
   }
   ;
 

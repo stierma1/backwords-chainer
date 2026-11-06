@@ -29,12 +29,16 @@ Current highlights:
 - Basic user-defined infix operators via `op/3`
 - Existential `^` qualification in `bagof/3` and `setof/3`
 - Parse errors with line and column information
-- All-solutions predicates: `findall/3`, `bagof/3`, `setof/3`, and `forall/2`
+- Type checks: `var/1`, `nonvar/1`, `atom/1`, `number/1`, `compound/1`, and `ground/1`
+- Term inspection: `arg/3`, `copy_term/2`, and `term_variables/2`
+- Higher-order `call/N`
+- All-solutions predicates: `findall/3`, `findall/4`, `bagof/3`, `setof/3`, and `forall/2`
+- Aggregation: `aggregate/3` and `aggregate_all/3`
 - Dynamic database predicates: `assert/1`, `asserta/1`, `assertz/1`, `retract/1`, `abolish/1`, and `clause/2`
 - Built-in list/planning predicates via `loadDefaults()`
 - Custom JavaScript system calls
 - Rule serialization and retraction
-- 237 tests covering unification, statements, the parser, search strategies, arithmetic, constraints, syntax, and runtime behavior
+- 248 tests covering unification, statements, the parser, search strategies, arithmetic, constraints, syntax, term inspection, and runtime behavior
 
 ## Installation
 
@@ -183,6 +187,42 @@ choice(X) :- (primary(X) -> =(X, primary) ; =(X, secondary)).
 
 `!` commits to choices made since entering the current predicate. `(Cond -> Then ; Else)` commits to the first solution of `Cond` and then runs `Then`; it runs `Else` only when `Cond` fails. Cut pruning follows Prolog's depth-first control flow; breadth-first search does not currently implement cut pruning.
 
+
+### Term inspection and aggregation
+
+Type checks are available directly as predicates:
+
+```prolog
+var(X).
+nonvar(a).
+atom(a).
+number(3).
+compound(f(a)).
+ground(f(a, b)).
+```
+
+Term inspection and copying:
+
+```prolog
+arg(1, f(a, b), X).
+copy_term(f(X, X), Y).
+term_variables(f(X, Y, X), Variables).
+```
+
+`call/N` appends extra arguments to a closure:
+
+```prolog
+call(add(1, 2), X).
+call(add, 1, 2, X).
+```
+
+`findall/4` builds a difference list, and `aggregate/3` / `aggregate_all/3` support count, sum, average, min, max, bag, and set templates:
+
+```prolog
+findall(X, member(X, [a,b]), List, Tail).
+aggregate_all(count, member(X, [a,b,c]), Count).
+aggregate_all(sum(X), member(X, [1,2,3]), Total).
+```
 
 ### Dynamic database
 
@@ -472,6 +512,7 @@ This is useful for embedding the resolution engine in another system or for dire
 - Integer and bignum arithmetic is exact in `is/2`; rational division currently produces decimal floating-point results rather than exact rationals.
 - The occurs-check setting is process-global in the current implementation.
 - User-defined operators currently support infix declarations (`xfx`, `xfy`, `yfx`); prefix/postfix forms and full operator precedence tables are still limited.
+- `aggregate/3` and `aggregate_all/3` support `count`, `sum`, `avg`, `min`, `max`, `bag`, and `set` templates; the full Prolog aggregate library is not implemented.
 - Modules, DCGs, exceptions, and I/O predicates are not implemented.
 - DFS can loop on left-recursive programs; BFS can find shallow solutions but may consume large amounts of memory without visited-state deduplication.
 
@@ -512,15 +553,15 @@ The goal is to become progressively closer to a practical Prolog implementation.
 | `^` existential qualification for `bagof`/`setof` | Full free-variable grouping semantics | Done |
 | Better parse errors with locations | Faster debugging | Done |
 
-### Phase 4: Term inspection and meta-predicates
+### Phase 4: Term inspection and meta-predicates (implemented)
 
-| Feature | Benefit |
-| --- | --- |
-| `var/1`, `nonvar/1`, `atom/1`, `number/1`, `compound/1`, `ground/1` | First-class type checks instead of `systemCall(isAtom(...))` |
-| `functor/3` and `arg/3` | Term decomposition and construction |
-| `copy_term/2` and `term_variables/2` | Safe meta-programming and term rewriting |
-| `call/N` | Higher-order logic and generic collection predicates |
-| `findall/4`, `aggregate/3`, `aggregate_all/3` | More collection and aggregation patterns |
+| Feature | Benefit | Status |
+| --- | --- | --- |
+| `var/1`, `nonvar/1`, `atom/1`, `number/1`, `compound/1`, `ground/1` | First-class type checks instead of `systemCall(isAtom(...))` | Done |
+| `functor/3` and `arg/3` | Term decomposition and construction | Done |
+| `copy_term/2` and `term_variables/2` | Safe meta-programming and term rewriting | Done |
+| `call/N` | Higher-order logic and generic collection predicates | Done |
+| `findall/4`, `aggregate/3`, `aggregate_all/3` | More collection and aggregation patterns | Done |
 
 ### Phase 5: Standard library
 
@@ -596,7 +637,7 @@ npm install
 npm test
 ```
 
-The suite currently contains 237 tests and exercises unification, statements, parsing, arithmetic, constraints, comments, quoted atoms, operators, lists, negation, cut, if-then-else, dynamic database predicates, all-solutions predicates, DFS/BFS search, serialization, and error handling.
+The suite currently contains 248 tests and exercises unification, statements, parsing, arithmetic, constraints, comments, quoted atoms, operators, type checks, term inspection, higher-order calls, aggregation, lists, negation, cut, if-then-else, dynamic database predicates, all-solutions predicates, DFS/BFS search, serialization, and error handling.
 
 ## Design notes
 
